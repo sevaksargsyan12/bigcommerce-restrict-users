@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { CustomersList, ICustomer } from '@/components/customers/customersList';
+import { CustomersList,ICustomer } from '@/components/customers/customersList';
 
 interface IProduct {
   id: string;
   name: string;
   price: number;
+  custom_fields: Array<{ id?: number; name: string; value: string }>;
 }
 
-interface IMetaField {
-  key: string;
+interface ICustomField {
+  id?: number;
+  name: string;
   value: string;
 }
 
@@ -28,16 +30,32 @@ export default function ProductListPage() {
   }, [activeProductId]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProducts = async (customers: ICustomer[]) => {
       try {
         const res = await fetch('/api/products');
         const data = await res.json();
         setProducts(data);
         if (data?.length) setActiveProductId(data[0].id);
+
+        // Initialize selected customers from custom fields
+        const initialSelected: Record<string, ICustomer[]> = {};
+        for (const product of data) {
+          const restrictUsersField = product.custom_fields.find(
+            (field: ICustomField) => field.name === 'restrict_users'
+          );
+
+          if (restrictUsersField && restrictUsersField.value) {
+            const customerIds = restrictUsersField.value.split(',');
+            initialSelected[product.id] = customers.filter((c) =>
+              customerIds.includes(c.id.toString())
+            );
+          }
+        }
+        console.log({initialSelected});
+
+        setSelectedCustomers(initialSelected);
       } catch (error) {
         console.error('Error fetching products:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -46,33 +64,42 @@ export default function ProductListPage() {
         const res = await fetch('/api/customers');
         const data = await res.json();
         setCustomers(data);
+        return data;
       } catch (error) {
         console.error('Error fetching customers:', error);
+        return [];
       }
     };
 
-    fetchCustomers();
-    fetchProducts();
+    const initializeData = async () => {
+      const customers :ICustomer[] = await fetchCustomers();
+      await fetchProducts(customers);
+      setLoading(false);
+    };
+
+    initializeData();
   }, []);
 
   const filteredCustomers = customers.filter((customer) => {
     const searchString = `${customer.first_name} ${customer.last_name} ${customer.company}`.toLowerCase();
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
     if (!activeProductId) return matchesSearch;
-    return matchesSearch && !selectedCustomers[activeProductId]?.some(c => c.id === customer.id);
+    return matchesSearch && !selectedCustomers[activeProductId]?.some((c) => c.id === customer.id);
   });
 
-  const handleAddMetafield = async (productId: string) => {
+  const handleAddCustomField = async (productId: string) => {
     const selected = selectedCustomers[productId] || [];
     const customerIds = selected.map((c) => c.id).join(',');
+    alert(customerIds);
+    // return;
 
     try {
-      const res = await fetch('/api/metafield', {
+      const res = await fetch('/api/custom-fields', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
-          key: 'related_customers',
+          name: 'restrict_users',
           value: customerIds,
         }),
       });
@@ -80,8 +107,8 @@ export default function ProductListPage() {
       const result = await res.json();
       alert(result.success ? 'Customers saved successfully' : 'Failed to save customers');
     } catch (error) {
-      console.error('Error saving metafield:', error);
-      alert('Error saving customers');
+      console.error('Error managing custom field:', error);
+      alert('Error managing customers');
     }
   };
 
@@ -95,7 +122,7 @@ export default function ProductListPage() {
   const handleCustomerRemove = (customerId: string, productId: string) => {
     setSelectedCustomers((prev) => ({
       ...prev,
-      [productId]: prev[productId].filter(c => c.id !== customerId),
+      [productId]: prev[productId].filter((c) => c.id !== customerId),
     }));
   };
 
@@ -136,8 +163,8 @@ export default function ProductListPage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                   <button
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
-                    onClick={() => handleAddMetafield(product.id)}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer"
+                    onClick={() => handleAddCustomField(product.id)}
                   >
                     Save Customers
                   </button>

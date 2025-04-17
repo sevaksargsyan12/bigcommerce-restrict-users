@@ -13,56 +13,72 @@ export async function getAllProducts() {
     const response = await bigcommerce.get('/catalog/products');
     const products = response.data;
 
-    // Fetch metafields for each product
-    const productsWithMetafields = await Promise.all(
+    // Fetch custom fields for each product
+    const productsWithCustomFields = await Promise.all(
       products.map(async (product: any) => {
         try {
-          const meta = await bigcommerce.get(`/catalog/products/${product.id}/metafields`);
-          return { ...product, metafields: meta.data || [] };
+          const customFields = await bigcommerce.get(`/catalog/products/${product.id}/custom-fields`);
+          return { ...product, custom_fields: customFields.data || [] };
         } catch (e) {
-          console.error(`Failed to fetch metafields for product ${product.id}`, e);
-          return { ...product, metafields: [] };
+          console.error(`Failed to fetch custom fields for product ${product.id}`, e);
+          return { ...product, custom_fields: [] };
         }
       })
     );
 
-    return productsWithMetafields;
+    return productsWithCustomFields;
   } catch (error) {
     console.error('Failed to fetch products:', error);
     return [];
   }
 }
-
-export async function createMetafield(productId: number, metafield: { key: string; value: string; namespace?: string }) {
-  try {
-    const result = await bigcommerce.post(`/catalog/products/${productId}/metafields`, [
-      {
-        key: metafield.key,
-        value: metafield.value,
-        namespace: metafield.namespace || 'custom',
-        permission_set: 'read_and_sf_access',
-        description: 'Added from app',
-      },
-    ]);
-    return result.data;
-  } catch (error) {
-    console.error('Failed to create metafield:', error);
-    return null;
-  }
-}
-
 
 export async function getAllCustomers() {
   try {
     const response = await bigcommerce.get('/customers');
     const customers = response.data;
-
-    // Fetch metafields for each product
-
-    console.log({customers});
     return customers;
   } catch (error) {
-    console.error('Failed to fetch products:', error);
+    console.error('Failed to fetch customers:', error);
     return [];
+  }
+}
+
+export async function getProductCustomFields(productId: number, filterName: string = '') {
+  try {
+    const response = await bigcommerce.get(`/catalog/products/${productId}/custom-fields`);
+    if(filterName && response.data) {
+      return response.data.filter((c: any) => c.name === filterName);
+    } 
+    return response.data || [];
+  } catch (error) {
+    console.error(`Failed to fetch custom fields for product ${productId}:`, error);
+    return [];
+  }
+}
+
+export async function createCustomField(productId: number, customField: { name: string; value: string }) {
+  try {
+    const result = await bigcommerce.post(`/catalog/products/${productId}/custom-fields`, {
+      name: customField.name,
+      value: customField.value,
+    });
+    return result.data;
+  } catch (error) {
+    console.error('Failed to create custom field:', error);
+    return null;
+  }
+}
+
+export async function updateCustomField(productId: number, customFieldId: number, customField: { name: string; value: string }) {
+  try {
+    const result = await bigcommerce.put(`/catalog/products/${productId}/custom-fields/${customFieldId}`, {
+      name: customField.name,
+      value: customField.value,
+    });
+    return result.data;
+  } catch (error) {
+    console.error('Failed to update custom field:', error);
+    return null;
   }
 }
