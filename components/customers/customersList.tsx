@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 export interface ICustomer {
   id: string;
@@ -9,39 +9,49 @@ export interface ICustomer {
   company: string;
 }
 
-export type CustomersListProps = {
-  customers: ICustomer[],
+export interface CustomersListProps {
+  customers: ICustomer[];
   onSelect?: (customer: ICustomer) => void;
   onRemove?: (customer: ICustomer) => void;
 }
 
-
-export function CustomersList({customers, onSelect, onRemove}: CustomersListProps) {
-
+export function CustomersList({ customers, onSelect, onRemove }: CustomersListProps) {
   useEffect(() => {
-    console.log('Render Customers');
-  },[]);
+    console.log('CustomersList rendered with', customers.length, 'customers');
+  }, [customers]);
 
+  if (!customers.length && onSelect) {
+    return <div className="p-2 text-gray-500">No customers found</div>;
+  }
 
   return (
-    <ul className="bg-white border max-h-40 overflow-y-auto">
-    {customers
-      .map((c :ICustomer) => (
-        onSelect ?
+    <ul className="bg-white border rounded-lg max-h-40 overflow-y-auto">
+      {customers.map((customer) => (
         <li
-          key={c.id}
-          className="p-2 hover:bg-blue-100 cursor-pointer my-1">
-          {c.first_name} {c.last_name} – {c.company}
-          <button className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl p-2 m-2 cursor-pointer" onClick={() => onSelect(c)}>Select</button>
+          key={customer.id}
+          className="flex items-center justify-between p-2 hover:bg-blue-50 transition-colors"
+        >
+          <span className="text-gray-700">
+            {customer.first_name} {customer.last_name} – {customer.company}
+          </span>
+          {onSelect && (
+            <button
+              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded-full"
+              onClick={() => onSelect(customer)}
+            >
+              Add
+            </button>
+          )}
+          {onRemove && (
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1 rounded-full"
+              onClick={() => onRemove(customer)}
+            >
+              Remove
+            </button>
+          )}
         </li>
-        : (onRemove && c?.id) ?
-        <li
-        key={c.id}
-        className="p-2 hover:bg-blue-100 cursor-pointer my-1">
-        {c.first_name} {c.last_name} – {c.company}
-        <button className="bg-red-500 hover:bg-red-600 text-white rounded-2xl p-1 m-1 cursor-pointer" onClick={() => onRemove(c)}>X</button>
-      </li> : null
       ))}
-  </ul>
+    </ul>
   );
 }

@@ -1,135 +1,165 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isHtml } from '../lib/helpers/isHtml';
-import { CustomersList, ICustomer } from '@/components/customers/customersList';
 import clsx from 'clsx';
+import { CustomersList, ICustomer } from '@/components/customers/customersList';
+
+interface IProduct {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface IMetaField {
+  key: string;
+  value: string;
+}
 
 export default function ProductListPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newMeta, setNewMeta] = useState<Record<number, { key: string; value: string }>>({});
-  const [selectedCustomers, setSelectedCustomers] = useState<Record<number | string, any[]>>({});
+  const [selectedCustomers, setSelectedCustomers] = useState<Record<string, ICustomer[]>>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [activeProduct, setActiveProduct] = useState();
+  const [customers, setCustomers] = useState<ICustomer[]>([]);
+  const [activeProductId, setActiveProductId] = useState<string | null>(null);
 
   useEffect(() => {
     setSearchTerm('');
-  },[activeProduct]);
+  }, [activeProductId]);
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const res = await fetch('/api/products');
-      const data = await res.json();
-      setProducts(data);
-      data?.length && setActiveProduct(data[0].id);
-      setLoading(false);
+      try {
+        const res = await fetch('/api/products');
+        const data = await res.json();
+        setProducts(data);
+        if (data?.length) setActiveProductId(data[0].id);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     const fetchCustomers = async () => {
-      const res = await fetch('/api/customers');
-      const data = await res.json();
-      console.log('Customers-->',data);
-      setCustomers(data);
+      try {
+        const res = await fetch('/api/customers');
+        const data = await res.json();
+        setCustomers(data);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+      }
     };
 
     fetchCustomers();
     fetchProducts();
   }, []);
 
-  const filteredCustomers = customers
-  .filter((c) => {
-    const currentCustumer = c;
-    if (`${c.first_name} ${c.last_name} ${c.company}`.toLowerCase().includes(searchTerm.toLowerCase()) ) {
-      if(!activeProduct) {
-          return true;
-      } else {
-        return !selectedCustomers[activeProduct]?.map((c) => c.id).includes(currentCustumer.id)
-      }
-    } 
-  })
+  const filteredCustomers = customers.filter((customer) => {
+    const searchString = `${customer.first_name} ${customer.last_name} ${customer.company}`.toLowerCase();
+    const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+    if (!activeProductId) return matchesSearch;
+    return matchesSearch && !selectedCustomers[activeProductId]?.some(c => c.id === customer.id);
+  });
 
-  console.log('kokos', filteredCustomers, searchTerm.toLowerCase());
-
-  const handleAddMetafield = async (productId: number) => {
+  const handleAddMetafield = async (productId: string) => {
     const selected = selectedCustomers[productId] || [];
     const customerIds = selected.map((c) => c.id).join(',');
-  
-    const res = await fetch('/api/metafield', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productId,
-        key: 'related_customers',
-        value: customerIds,
-      }),
-    });
-  
-    const result = await res.json();
-    alert(result.success ? 'Metafield added' : 'Failed to add metafield');
+
+    try {
+      const res = await fetch('/api/metafield', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          key: 'related_customers',
+          value: customerIds,
+        }),
+      });
+
+      const result = await res.json();
+      alert(result.success ? 'Customers saved successfully' : 'Failed to save customers');
+    } catch (error) {
+      console.error('Error saving metafield:', error);
+      alert('Error saving customers');
+    }
   };
-  
+
   const handleCustomerSelect = (customer: ICustomer, productId: string) => {
     setSelectedCustomers((prev) => ({
       ...prev,
-      [productId]: [...(prev[productId] || []),{id: customer.id, company: customer.company}]
-    }))
-    // alert(customer.first_name + ' attached to product ' + productId);
-  }
+      [productId]: [...(prev[productId] || []), customer],
+    }));
+  };
 
-  const handleCustomerRemove = (customer: ICustomer, productId: string) => {
-    console.error({customer}, selectedCustomers[productId]);
+  const handleCustomerRemove = (customerId: string, productId: string) => {
     setSelectedCustomers((prev) => ({
       ...prev,
-      [productId]: [(prev[productId] || []).filter(c => c.id !== customer.id)]
-    }))
-    // alert(customer.first_name + ' attached to product ' + productId);
-  }
+      [productId]: prev[productId].filter(c => c.id !== customerId),
+    }));
+  };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <div className="p-4">Loading...</div>;
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1 className="text-4xl font-bold text-blue-800 pt">Product List {customers.length}</h1>
-      {products.map((product) => (
-
-        <div 
-         key={product.id}
-         className={clsx(
-          'product-wrapper p-6 m-2 rounded-2xl border-blue-300 border-2 relative',
-          activeProduct === product.id && 'bg-green-100',
-          activeProduct !== product.id && 'opacity-60',
-        )}
+    <main className="p-5">
+      <h1 className="text-3xl font-bold text-blue-800 mb-6">Product List</h1>
+      <div className="grid gap-4">
+        {products.map((product) => (
+          <div
+            key={product.id}
+            className={clsx(
+              'p-6 rounded-xl border-2 border-blue-300 relative',
+              activeProductId === product.id ? 'bg-green-50' : 'bg-gray-50 opacity-90',
+              'transition-all duration-200'
+            )}
           >
-                    <pre style={{color:'red'}}>
-          {JSON.stringify(selectedCustomers[product.id])}
-         {selectedCustomers[product.id] && 
-                  <CustomersList customers={selectedCustomers[product.id] || []} onRemove={(customer: ICustomer) => handleCustomerRemove(customer, product.id)} />
-        } 
-        </pre>
-          <button className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl p-1 m-1 cursor-pointer absolute top-2 right-4 text-[14px]" onClick={() => setActiveProduct(product.id)}>Set</button>
-  
-          <h3 className='text-3xl font-bold text-blue-800'>{product.name} – ${product.price}</h3>
-          {activeProduct === product.id && 
-          (<div className='restrict-customers-wrapper'>
-            <input
-                type="text"
-                placeholder="Search customers..."
-                className="border px-2 py-1 mb-2"
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            <CustomersList customers={filteredCustomers} onSelect={(customer: ICustomer) => handleCustomerSelect(customer, product.id)} />
-            <div className="flex flex-wrap mt-2 gap-2">
-              {(selectedCustomers[product.id] || []).map((c) => (
-                <span key={c.id} className="bg-green-100 px-2 py-1 rounded text-sm">
-                  {c.first_name} {c.last_name}
-                </span>
-              ))}
-            </div>
-          </div>)}
-        </div>
-      ))}
+            <button
+              className="absolute top-3 right-3 bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded-full"
+              onClick={() => setActiveProductId(product.id)}
+            >
+              {activeProductId === product.id ? 'Active' : 'Select'}
+            </button>
+
+            <h3 className="text-2xl font-semibold text-blue-800 mb-2">
+              {product.name} – ${product.price}
+            </h3>
+
+            {activeProductId === product.id && (
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Search customers..."
+                    className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <button
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+                    onClick={() => handleAddMetafield(product.id)}
+                  >
+                    Save Customers
+                  </button>
+                </div>
+
+                <CustomersList
+                  customers={filteredCustomers}
+                  onSelect={(customer) => handleCustomerSelect(customer, product.id)}
+                />
+
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-700 mb-2">Selected Customers:</h4>
+                  <CustomersList
+                    customers={selectedCustomers[product.id] || []}
+                    onRemove={(customer) => handleCustomerRemove(customer.id, product.id)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </main>
   );
 }
