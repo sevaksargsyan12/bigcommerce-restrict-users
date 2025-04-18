@@ -8,10 +8,15 @@ const bigcommerce = new BigCommerce({
   apiVersion: 'v3',
 });
 
-export async function getAllProducts() {
+export async function getAllProducts(keyword: string = '', limit: number = 5) {
   try {
-    const response = await bigcommerce.get('/catalog/products');
+    const query = new URLSearchParams();
+    query.set('limit', limit.toString());
+    if (keyword) query.set('keyword', keyword);
+
+    const response = await bigcommerce.get(`/catalog/products?${query.toString()}`);
     const products = response.data;
+    console.log('---pppRODUCTS',products);
 
     // Fetch custom fields for each product
     const productsWithCustomFields = await Promise.all(

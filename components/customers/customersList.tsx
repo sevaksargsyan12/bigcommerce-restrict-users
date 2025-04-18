@@ -12,6 +12,7 @@ export interface ICustomer {
 
 export interface CustomersListProps {
   customers: ICustomer[];
+  allocated: string[];
   onSelect?: (customer: ICustomer) => void;
   onRemove?: (customer: ICustomer) => void;
 }
