@@ -115,7 +115,7 @@ export default function ProductListPage() {
   const handleCustomerSelect = (customer: ICustomer, productId: string) => {
     setSelectedCustomers((prev) => ({
       ...prev,
-      [productId]: [...(prev[productId] || []), customer],
+      [productId]: [customer,...(prev[productId] || [])],
     }));
   };
 
@@ -136,32 +136,27 @@ export default function ProductListPage() {
           <div
             key={product.id}
             className={clsx(
-              'p-6 rounded-xl border-2 border-blue-300 relative',
+              'p-6 rounded-xl border-2 border-blue-300 hover:border-blue-600 relative',
               activeProductId === product.id ? 'bg-green-50' : 'bg-gray-50 opacity-90',
               'transition-all duration-200'
             )}
           >
             <button
-              className="absolute top-3 right-3 bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded-full"
+              className="absolute top-3 right-3 bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded-full hidden"
               onClick={() => setActiveProductId(product.id)}
             >
               {activeProductId === product.id ? 'Active' : 'Select'}
             </button>
 
-            <h3 className="text-2xl font-semibold text-blue-800 mb-2">
+            <h3  
+              onClick={() => setActiveProductId(product.id)}
+              className="text-2xl font-semibold text-blue-800 mb-2 cursor-pointer">
               {product.name} – ${product.price}
             </h3>
 
             {activeProductId === product.id && (
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search customers..."
-                    className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
                   <button
                     className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer"
                     onClick={() => handleAddCustomField(product.id)}
@@ -169,20 +164,32 @@ export default function ProductListPage() {
                     Save Customers
                   </button>
                 </div>
-
-                <CustomersList
-                  customers={filteredCustomers}
-                  onSelect={(customer) => handleCustomerSelect(customer, product.id)}
-                />
-
-                <div className="mt-4">
-                  <h4 className="font-medium text-gray-700 mb-2">Selected Customers:</h4>
-                  <CustomersList
-                    customers={selectedCustomers[product.id] || []}
-                    onRemove={(customer) => handleCustomerRemove(customer.id, product.id)}
-                  />
-                </div>
+                <div className='customers-wrapper flex gap-4'>
+                  <div className="mt-4 w-1/2">
+                  <div className='flex gap-2 mb-2'>
+                  <h4 className="font-medium text-gray-600 mb-2 text-2xl">All Customers:                     </h4><input
+                    type="text"
+                    placeholder="Search customers..."
+                    className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  /></div>
+                    
+                    <CustomersList
+                      customers={filteredCustomers}
+                      onSelect={(customer) => handleCustomerSelect(customer, product.id)}
+                    />
+                  </div>
+                  <div className="mt-4 w-1/2">
+                    <h4 className="font-medium text-red-700 text-2xl mb-4">Restricted Customers:</h4>
+                    <CustomersList
+                      customers={selectedCustomers[product.id] || []}
+                      onRemove={(customer) => handleCustomerRemove(customer.id, product.id)}
+                    />
+                  </div>
               </div>
+                </div>
+
             )}
           </div>
         ))}
