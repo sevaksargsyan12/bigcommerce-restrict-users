@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch existing custom fields for the product
     const customFields = await getProductCustomFields(productId);
-    const restrictUsersField = customFields.find((field: any) => field.name === 'restrict_users');
+    const restrictUsersField = customFields.find((field: any) => field.name === name);
 
     let result;
     if (restrictUsersField && restrictUsersField.id) {

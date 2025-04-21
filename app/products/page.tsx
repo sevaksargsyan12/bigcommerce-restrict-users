@@ -19,7 +19,7 @@ interface ICustomField {
 }
 
 enum UserCondition {
-  ALLOCATE = "allocating_users",
+  ALLOCATE = "allocated_users",
   RESTRICT = "restrict_users",
 }
 
@@ -72,6 +72,8 @@ export default function ProductListPage() {
             (field: ICustomField) => field.name === UserCondition.ALLOCATE
           );
 
+          console.log({lolo:product.custom_fields});
+
           if (restrictUsersField && restrictUsersField.value) {
             const customerIds = restrictUsersField.value.split(",");
             initialSelected[product.id] = customers.filter((c) =>
@@ -87,6 +89,8 @@ export default function ProductListPage() {
           }
         }
         console.log({ initialSelected });
+        console.log({ initialSelectedAllocated });
+
 
         setSelectedCustomers(initialSelected);
         setAllocatedCustomers(initialSelectedAllocated);
@@ -139,14 +143,28 @@ export default function ProductListPage() {
 
         // Initialize selected customers from custom fields
         const initialSelected: Record<string, ICustomer[]> = {};
+        const initialSelectedAllocated: Record<string, ICustomer[]> = {};
+
         for (const product of data) {
           const restrictUsersField = product.custom_fields.find(
             (field: ICustomField) => field.name === condition
           );
 
+          
           if (restrictUsersField && restrictUsersField.value) {
             const customerIds = restrictUsersField.value.split(",");
             initialSelected[product.id] = customers.filter((c) =>
+              customerIds.includes(c.id.toString())
+            );
+          }
+
+          const allocatedUsersField = product.custom_fields.find(
+            (field: ICustomField) => field.name === UserCondition.ALLOCATE
+          );
+
+          if (allocatedUsersField && allocatedUsersField.value) {
+            const customerIds = allocatedUsersField.value.split(",");
+            initialSelectedAllocated[product.id] = customers.filter((c) =>
               customerIds.includes(c.id.toString())
             );
           }
@@ -154,6 +172,7 @@ export default function ProductListPage() {
         console.log({ initialSelected });
 
         setSelectedCustomers(initialSelected);
+        setAllocatedCustomers(initialSelectedAllocated);
       } catch (error) {
         console.error("Error fetching products:", error);
       }
@@ -173,12 +192,19 @@ export default function ProductListPage() {
     );
   });
 
-  const handleAddCustomField = async (productId: string) => {
+  const handleAddCustomField = async (productId: string, name = '', condition2 = '') => {
     setLoadingProduct(productId);
-    const selected = selectedCustomers[productId] || [];
-    const customerIds = selected.map((c) => c.id).join(",");
+    const selected = condition2 ? (allocatedCustomers[productId] || []) : (selectedCustomers[productId] || []);
+    let customerIds = selected.map((c) => c.id).join(",");
     // alert(customerIds);
     // return;
+    console.log('%cThis is a custom colored message!', 'color: green');
+    console.log({customerIds});
+
+
+    if(condition2) {
+       customerIds = [condition2,selected.map((c) => c.id)].join(",");
+    }
 
     try {
       const res = await fetch("/api/custom-fields", {
@@ -186,17 +212,21 @@ export default function ProductListPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId,
-          name: condition,
+          name: name ? name : condition,
           value: customerIds,
         }),
       });
 
       const result = await res.json();
+      setLoadingProduct("");
+
       alert(
         result.success
           ? "Customers saved successfully"
           : "Failed to save customers"
       );
+      return result;
+      
     } catch (error) {
       console.error("Error managing custom field:", error);
       alert("Error managing customers");
@@ -210,6 +240,16 @@ export default function ProductListPage() {
       ...prev,
       [productId]: [customer, ...(prev[productId] || [])],
     }));
+  };
+
+  const handleCustomerAllocation = async (customer: ICustomer, productId: string) => {
+    const result = await handleAddCustomField(productId, UserCondition.ALLOCATE, customer.id);
+    if(result) {
+      setAllocatedCustomers((prev) => ({
+        ...prev,
+        [productId]: [customer, ...(prev[productId] || [])],
+      }));
+    }
   };
 
   const handleCustomerRemove = (customerId: string, productId: string) => {
@@ -295,6 +335,8 @@ export default function ProductListPage() {
                     </div>
 
                     <CustomersList
+                      allocatedUsersList={allocatedCustomers[product.id]?.map(c => c.id)}
+                      onAllocate={(customer) => handleCustomerAllocation(customer, product.id)}
                       customers={filteredCustomers}
                       onSelect={(customer) =>
                         handleCustomerSelect(customer, product.id)
@@ -306,6 +348,8 @@ export default function ProductListPage() {
                       Restricted Customers:
                     </h4>
                     <CustomersList
+                      allocatedUsersList={allocatedCustomers[product.id]?.map(c => c.id)}
+                      onAllocate={(customer) => handleCustomerAllocation(customer, product.id)}
                       customers={selectedCustomers[product.id] || []}
                       onRemove={(customer) =>
                         handleCustomerRemove(customer.id, product.id)
