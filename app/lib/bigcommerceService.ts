@@ -87,3 +87,13 @@ export async function updateCustomField(productId: number, customFieldId: number
     return null;
   }
 }
+
+export async function removeCustomField(productId: number, customFieldId: number) {
+  try {
+    const result = await bigcommerce.delete(`/catalog/products/${productId}/custom-fields/${customFieldId}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to delete custom field:', error);
+    return null;
+  }
+}

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProductCustomFields, createCustomField, updateCustomField } from '@/app/lib/bigcommerceService';
+import { getProductCustomFields, createCustomField, updateCustomField, removeCustomField } from '@/app/lib/bigcommerceService';
 
 export async function POST(req: NextRequest) {
   try {
-    console.log(8888,{req});
+    console.log(8888, { req });
 
     const { productId, name, value } = await req.json();
 
@@ -31,6 +31,27 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    console.log(8888, { req });
+
+    const { productId, customFieldId } = await req.json();
+
+    if (!productId || !customFieldId) {
+      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
+    }
+
+    let result;
+    result = await removeCustomField(productId, customFieldId);
+    console.log({result});
+
+    return NextResponse.json({ success: !!result });
+  } catch (error) {
+    console.error('Error deleting custom field:', error);
+    return NextResponse.json({ success: false, error: 'Failed to delete custom field' }, { status: 500 });
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const productId = req.nextUrl.searchParams.get('productId');
@@ -39,7 +60,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing productId' }, { status: 400 });
     }
 
-    const customFields = filterName ? (await getProductCustomFields(parseInt(productId))).filter((c:any) => c.name === filterName) : await getProductCustomFields(parseInt(productId));
+    const customFields = filterName ? (await getProductCustomFields(parseInt(productId))).filter((c: any) => c.name === filterName) : await getProductCustomFields(parseInt(productId));
     return NextResponse.json(customFields);
   } catch (error) {
     console.error('Error fetching custom fields:', error);
