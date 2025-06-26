@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
-import { CustomersList, ICustomer } from "@/components/customers/customersList1";
+import {
+  CustomersList,
+  ICustomer,
+} from "@/components/customers/customersList1";
 
 interface IProduct {
   id: string;
@@ -36,13 +39,14 @@ export default function ProductListPage() {
     Record<string, ICustomer[]>
   >({});
   const [allocatedCustomers, setAllocatedCustomers] = useState<
-  Record<string, ICustomer[]>
->({});
+    Record<string, ICustomer[]>
+  >({});
   const [searchTerm, setSearchTerm] = useState("");
   const [searchProductTerm, setsearchProductTerm] = useState("");
   const [page, setPage] = useState("");
   const [customers, setCustomers] = useState<ICustomer[]>([]);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
+  const [filterTerm, setFilterTerm] = useState<UserCondition | "">("");
 
   useEffect(() => {
     setSearchTerm("");
@@ -74,7 +78,7 @@ export default function ProductListPage() {
             (field: ICustomField) => field.name === UserCondition.ALLOCATE
           );
 
-          console.log({lolo:product.custom_fields});
+          console.log({ lolo: product.custom_fields });
 
           if (restrictUsersField && restrictUsersField.value) {
             const customerIds = restrictUsersField.value.split(",");
@@ -92,7 +96,6 @@ export default function ProductListPage() {
         }
         console.log({ initialSelected });
         console.log({ initialSelectedAllocated });
-
 
         setSelectedCustomers(initialSelected);
         setAllocatedCustomers(initialSelectedAllocated);
@@ -152,7 +155,6 @@ export default function ProductListPage() {
             (field: ICustomField) => field.name === condition
           );
 
-          
           if (restrictUsersField && restrictUsersField.value) {
             const customerIds = restrictUsersField.value.split(",");
             initialSelected[product.id] = customers.filter((c) =>
@@ -188,18 +190,47 @@ export default function ProductListPage() {
       `${customer.first_name} ${customer.last_name} ${customer.company}`.toLowerCase();
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
     // if (!activeProductId) return matchesSearch;
-    return (
-      matchesSearch 
-      // && !selectedCustomers[activeProductId]?.some((c) => c.id === customer.id)
-    );
+    if (filterTerm === UserCondition.RESTRICT && activeProductId) {
+      if (
+        selectedCustomers[activeProductId]
+          ?.map((c) => c.id)
+          .includes(customer.id)
+      ) {
+        return matchesSearch;
+      }
+
+      return false;
+    } else if (filterTerm === UserCondition.ALLOCATE && activeProductId) {
+      if (
+        allocatedCustomers[activeProductId]
+          ?.map((c) => c.id)
+          .includes(customer.id)
+      ) {
+        return matchesSearch;
+      }
+
+      return false;
+    }
+
+    return matchesSearch;
+    // && !selectedCustomers[activeProductId]?.some((c) => c.id === customer.id)
   });
 
-  const handleCustomFieldAction = async (product: IProduct, customFieldName: UserCondition, customerId: string, remove = false, customFieldId: string = '') => {
+  const handleCustomFieldAction = async (
+    product: IProduct,
+    customFieldName: UserCondition,
+    customerId: string,
+    remove = false,
+    customFieldId: string = ""
+  ) => {
     const productId = product.id;
     setLoadingProduct(productId);
-    const selected = customFieldName === UserCondition.ALLOCATE ? (allocatedCustomers[productId] || []) : (selectedCustomers[productId] || []);
+    const selected =
+      customFieldName === UserCondition.ALLOCATE
+        ? allocatedCustomers[productId] || []
+        : selectedCustomers[productId] || [];
     // let customerIds = selected.map((c) => c.id).join(",");
-    let customerIds:any[] = [];
+    let customerIds: any[] = [];
     // alert(customerIds);
     // return;
     // console.log('%cThis is a custom colored message!', 'color: green');
@@ -207,91 +238,99 @@ export default function ProductListPage() {
     // console.log({remove, productId,customerIds});
     // // return;
 
-
-    if(customerId) {
-       customerIds = remove ? selected.filter((c) => c.id !== customerId).map((c)=>c.id) : [customerId,selected.map((c) => c.id)];
+    if (customerId) {
+      customerIds = remove
+        ? selected.filter((c) => c.id !== customerId).map((c) => c.id)
+        : [customerId, selected.map((c) => c.id)];
     }
 
-    console.log('%cThis is a custom colored message!', 'color: green');
-    console.log({customerIds});
-    console.log({remove, productId,customerIds});
+    console.log("%cThis is a custom colored message!", "color: green");
+    console.log({ customerIds });
+    console.log({ remove, productId, customerIds });
     // return;
 
     try {
-      if(customerIds.length) {
+      if (customerIds.length) {
         const res = await fetch("/api/custom-fields", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             productId,
             name: customFieldName,
-            value: customerIds.join(','),
+            value: customerIds.join(","),
           }),
         });
-  
+
         const result = await res.json();
         setLoadingProduct("");
-  
+
         // alert(
         //   result.success
         //     ? "Customers saved successfully"
         //     : "Failed to save customers"
         // );
-        toast.success(result.success
-          ? "Customers saved successfully"
-          : "Failed to save customers", {
-          position: 'top-center',
-          duration: 3000,
-        });
-
-        setProducts(products.map((prod) => {
-          if(prod.id === productId) {
-            return {...prod, custom_fields: prod.custom_fields.map((cf) => {
-                if(cf.name === customFieldName) {
-                  return result.data
-                }
-
-                return cf;
-            })}
+        toast.success(
+          result.success
+            ? "Customers saved successfully"
+            : "Failed to save customers",
+          {
+            position: "top-center",
+            duration: 3000,
           }
-          return prod
-        }))
+        );
 
+        setProducts(
+          products.map((prod) => {
+            if (prod.id === productId) {
+              return {
+                ...prod,
+                custom_fields: prod.custom_fields.map((cf) => {
+                  if (cf.name === customFieldName) {
+                    return result.data;
+                  }
+
+                  return cf;
+                }),
+              };
+            }
+            return prod;
+          })
+        );
 
         return result.data;
-
-
       } else {
         const res = await fetch("/api/custom-fields", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             productId,
-            customFieldId
+            customFieldId,
           }),
         });
-  
+
         const result = await res.json();
-        console.error({result});
+        console.error({ result });
         setLoadingProduct("");
-  
-        toast.success(result.success
-          ? "Changes were saved successfully"
-          : "Failed to do the changes", {
-          position: 'top-center',
-          duration: 3000,
-        });
+
+        toast.success(
+          result.success
+            ? "Changes were saved successfully"
+            : "Failed to do the changes",
+          {
+            position: "top-center",
+            duration: 3000,
+          }
+        );
 
         // location.reload();
         return [];
       }
-      
     } catch (error) {
-      toast.error('Error managing customers', {
+      toast.error("Error managing customers", {
         style: {
-          background: '#ffe6e6',
-          color: '#d32f2f',
-          border: '1px solid #d32f2f',
+          background: "#ffe6e6",
+          color: "#d32f2f",
+          border: "1px solid #d32f2f",
         },
         duration: 4000, // 4 seconds
       });
@@ -308,36 +347,64 @@ export default function ProductListPage() {
     }));
   };
 
-  const handleCustomerAllocation = async (customer: ICustomer, unAllocate: boolean, product: IProduct) => {
-    let customFieldId = product.custom_fields.filter((c) => c.name === UserCondition.ALLOCATE)[0]?.id;
-    alert(customFieldId);
-    const result = await handleCustomFieldAction(product, UserCondition.ALLOCATE, customer.id, unAllocate, customFieldId?.toString() || '');
-    if(result) {
+  const handleCustomerAllocation = async (
+    customer: ICustomer,
+    unAllocate: boolean,
+    product: IProduct
+  ) => {
+    let customFieldId = product.custom_fields.filter(
+      (c) => c.name === UserCondition.ALLOCATE
+    )[0]?.id;
+    // alert(customFieldId);
+    const result = await handleCustomFieldAction(
+      product,
+      UserCondition.ALLOCATE,
+      customer.id,
+      unAllocate,
+      customFieldId?.toString() || ""
+    );
+    if (result) {
       const productId = product.id;
       setAllocatedCustomers((prev) => ({
         ...prev,
-        [productId]: unAllocate ? [...prev[productId]].filter((c) => c.id !== customer.id) : [customer, ...(prev[productId] || [])],
+        [productId]: unAllocate
+          ? [...prev[productId]].filter((c) => c.id !== customer.id)
+          : [customer, ...(prev[productId] || [])],
       }));
     }
   };
 
-  const handleCustomerRestriction = async (customer: ICustomer, unRestrict: boolean, product: IProduct) => {
-    let customFieldId = product.custom_fields.filter((c) => c.name === UserCondition.RESTRICT)[0]?.id;
-    const result = await handleCustomFieldAction(product, UserCondition.RESTRICT, customer.id, unRestrict, customFieldId?.toString() || '');
-    if(result) {
+  const handleCustomerRestriction = async (
+    customer: ICustomer,
+    unRestrict: boolean,
+    product: IProduct
+  ) => {
+    let customFieldId = product.custom_fields.filter(
+      (c) => c.name === UserCondition.RESTRICT
+    )[0]?.id;
+    const result = await handleCustomFieldAction(
+      product,
+      UserCondition.RESTRICT,
+      customer.id,
+      unRestrict,
+      customFieldId?.toString() || ""
+    );
+    if (result) {
       const productId = product.id;
       setSelectedCustomers((prev) => ({
         ...prev,
-        [productId]: unRestrict ? [...prev[productId]].filter((c) => c.id !== customer.id) : [customer, ...(prev[productId] || [])],
+        [productId]: unRestrict
+          ? [...prev[productId]].filter((c) => c.id !== customer.id)
+          : [customer, ...(prev[productId] || [])],
       }));
     }
   };
 
-  const handleCustomerRemove = (customerId: string, productId: string) => {
-    setSelectedCustomers((prev) => ({
-      ...prev,
-      [productId]: prev[productId].filter((c) => c.id !== customerId),
-    }));
+  const filterHandler = (filterTermName: UserCondition) => {
+    setFilterTerm(filterTermName);
+    if (filterTerm == filterTermName) {
+      setFilterTerm("");
+    }
   };
 
   if (loading) return <div className="p-4">Loading...</div>;
@@ -400,11 +467,16 @@ export default function ProductListPage() {
                     Save Customers
                   </button> */}
                 </div>
-                <div className="customers-wrapper flex gap-4">
+                <div className="customers-wrapper flex gap-4 flex-wrap">
                   <div className="mt-4 w-full">
                     <div className="flex gap-2 mb-2">
-                      <h4 className="font-medium text-gray-600 mb-2 text-2xl">
-                        All Customers:
+                      <h4 className="font-medium text-gray-600 mb-2 text-2xl w-full">
+                        {filterTerm === UserCondition.ALLOCATE
+                          ? "Allocated"
+                          : filterTerm === UserCondition.RESTRICT
+                          ? "Restricted"
+                          : "All"} {" "}
+                        Customers:
                       </h4>
                       <input
                         type="text"
@@ -413,37 +485,57 @@ export default function ProductListPage() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
+                      <div className="filter-wrapper flex gap-4 p-1 bg-gray-100 m-2 border-1 border-black">
+                        <button
+                          className={clsx(
+                            "bg-gray-400 hover:bg-gray-600 text-center text-[12px] p-2 text-white rounded-xl cursor-pointer",
+                            filterTerm == UserCondition.RESTRICT &&
+                              "border-1 border-black bg-gray-600 hover:bg-gray-400 underline"
+                          )}
+                          onClick={() => filterHandler(UserCondition.RESTRICT)}
+                        >
+                          {filterTerm == UserCondition.RESTRICT
+                            ? "Filtered"
+                            : "Filter"} {" "}
+                          by Restricted
+                        </button>
+                        <button
+                          onClick={() => filterHandler(UserCondition.ALLOCATE)}
+                          className={clsx(
+                            "bg-gray-400 hover:bg-gray-600 text-center text-[12px] p-2 text-white rounded-xl cursor-pointer",
+                            filterTerm == UserCondition.ALLOCATE &&
+                              "border-1 border-black bg-gray-600 hover:bg-gray-400 underline"
+                          )}
+                        >
+                          {filterTerm == UserCondition.ALLOCATE
+                            ? "Filtered"
+                            : "Filter"} {" "}
+                          by Allocated
+                        </button>
+                      </div>
                     </div>
 
                     <CustomersList
-                      allocatedUsersList={allocatedCustomers[product.id]?.map(c => c.id)}
-                      restrictedUsersList={selectedCustomers[product.id]?.map(c => c.id)}
-                      onAllocate={(customer, unAllocate) => handleCustomerAllocation(customer,unAllocate, product)}
-                      onRestrict={(customer, unRestrict) => handleCustomerRestriction(customer,unRestrict, product)}
+                      allocatedUsersList={allocatedCustomers[product.id]?.map(
+                        (c) => c.id
+                      )}
+                      restrictedUsersList={selectedCustomers[product.id]?.map(
+                        (c) => c.id
+                      )}
+                      onAllocate={(customer, unAllocate) =>
+                        handleCustomerAllocation(customer, unAllocate, product)
+                      }
+                      onRestrict={(customer, unRestrict) =>
+                        handleCustomerRestriction(customer, unRestrict, product)
+                      }
                       customers={filteredCustomers}
                       onSelect={(customer) =>
                         handleCustomerSelect(customer, product.id)
                       }
                       // onRestrict={(customer) =>
                       //   handleCustomerSelect(customer, product.id)
-                      // }                
-                          />
-                  </div>
-                  <div className="mt-4 w-1/2">
-                    <h4 className="font-medium text-red-700 text-2xl mb-4">
-                      Restricted Customers:
-                    </h4>
-                    {/* <CustomersList
-                      restrictedUsersList={selectedCustomers[product.id]?.map(c => c.id)}
-                      onAllocate={(customer) => handleCustomerAllocation(customer, product.id)}
-                      customers={selectedCustomers[product.id] || []}
-                      onRemove={(customer) =>
-                        handleCustomerRemove(customer.id, product.id)
-                      }
-                      onRestrict={(customer) =>
-                        handleCustomerSelect(customer, product.id)
-                      }  
-                    /> */}
+                      // }
+                    />
                   </div>
                 </div>
               </div>

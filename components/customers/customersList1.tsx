@@ -59,16 +59,16 @@ export function CustomersList({
             <span
               onClick={() => onAllocate(customer, true)}
               title='Click on button to cancel allocation'
-              className="bg-green-500 hover:bg-green-600 text-center text-[14px] p-2 text-white rounded-xl cursor-pointer w-[120px]">
+              className="bg-green-600 hover:bg-green-700 text-center text-[14px] p-2 text-white rounded-xl cursor-pointer w-[120px]">
               Allocated
             </span>
           ) : (
             <span
               onClick={restrictedUsersList?.includes(customer.id) ? () => {} : () => onAllocate(customer, false)}
               className={clsx(
-                "bg-white text-center p-2 rounded-xl w-[120px] text-black  text-[14px] cursor-pointer",
+                "bg-white text-center p-2 w-[120px] text-black  text-[14px] cursor-pointer",
                 restrictedUsersList?.includes(customer.id) ?
-                  "opacity-50 !cursor-not-allowed hover:bg-white hover:text-black" : "hover:bg-green-500  hover:text-white",
+                  "opacity-50 !cursor-not-allowed hover:bg-white hover:text-black" : "hover:bg-green-400  hover:text-white",
                 onRemove && "bg-red-50 hover:bg-red-100"
               )}
               title={
@@ -84,15 +84,15 @@ export function CustomersList({
             <span
               onClick={() => onRestrict(customer, true)}
               title='Click on button to cancel restriction'
-              className="bg-red-500 hover:bg-red-600 text-[14px] p-2 text-white text-center rounded-xl cursor-pointer w-[120px]">
+              className="bg-red-600 hover:bg-red-700 text-[14px] p-2 text-white text-center rounded-xl cursor-pointer w-[120px]">
               Restricted
             </span>
           ) : (
             <span
               onClick={allocatedUsersList?.includes(customer.id) ? () => {} :() => onRestrict(customer, false)}
               className={clsx(
-                "bg-white text-black text-center  w-[120px]  p-2 rounded-xl  text-[14px]",
-                allocatedUsersList?.includes(customer.id) ? "opacity-50 !cursor-not-allowed": "hover:bg-red-500  cursor-pointer hover:text-white",
+                "bg-white text-black text-center  w-[120px]  p-2  text-[14px]",
+                allocatedUsersList?.includes(customer.id) ? "opacity-50 !cursor-not-allowed": "hover:bg-red-400  cursor-pointer hover:text-white",
                 onRemove && "bg-red-50 hover:bg-red-100"
               )}
               title={allocatedUsersList?.includes(customer.id)?'You can\'t restrict allocated user':'Click on button to restrict'}
