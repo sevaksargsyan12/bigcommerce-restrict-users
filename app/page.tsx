@@ -6,9 +6,9 @@ export default function Home() {
     <main style={{ padding: '20px' }}>
       <h1 className='bg-blend-color-dodge text-center border-2 pt-8'>Welcome to Your BigCommerce App</h1>
       <StoreContextInfo />
-      <Link href="/products" style={{ display: 'block', marginTop: 20 }}>
+      {/* <Link href="/products" style={{ display: 'block', marginTop: 20 }}>
         Go to Product List →
-      </Link>
+      </Link> */}
       <Link href="/customers" style={{ display: 'block', marginTop: 20 }}>
         Go to Product List →
       </Link>

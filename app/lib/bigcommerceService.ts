@@ -1,7 +1,7 @@
 import BigCommerce from 'node-bigcommerce';
 
 const bigcommerce = new BigCommerce({
-  clientId: process.env.DEV_BIGCOMMERCE_CLIENT_ID!,
+  clientId: process.env.DEV_BIGCOMMERCE_CLIENT_ID! || "",
   accessToken: process.env.DEV_BIGCOMMERCE_ACCESS_TOKEN!,
   storeHash: process.env.DEV_BIGCOMMERCE_STORE_HASH!,
   responseType: 'json',
@@ -13,10 +13,13 @@ export async function getAllProducts(keyword: string = '', limit: number = 5) {
     const query = new URLSearchParams();
     query.set('limit', limit.toString());
     if (keyword) query.set('keyword', keyword);
+    // query.set('sort', 'date_created'); // Sort by creation date
+    // query.set('direction', 'desc');    // Descending order
+    query.set('sort', 'date_modified'); // Use date_modified instead
+    query.set('direction', 'desc');
 
     const response = await bigcommerce.get(`/catalog/products?${query.toString()}`);
     const products = response.data;
-    console.log('---pppRODUCTS',products);
 
     // Fetch custom fields for each product
     const productsWithCustomFields = await Promise.all(

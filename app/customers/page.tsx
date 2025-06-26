@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import {
   CustomersList,
   ICustomer,
-} from "@/components/customers/customersList1";
+} from "@/components/customers/customersList";
 
 interface IProduct {
   id: string;
@@ -55,7 +55,7 @@ export default function ProductListPage() {
   useEffect(() => {
     const fetchProducts = async (customers: ICustomer[]) => {
       try {
-        const limit = 5;
+        const limit = 100;
         const keyword = "";
         // const res = await fetch('/api/products?limit=2');
         const res = await fetch(

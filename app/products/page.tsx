@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { CustomersList, ICustomer } from "@/components/customers/customersList";
+import { CustomersList, ICustomer } from "@/components/customers/customersList-Old";
 
 interface IProduct {
   id: string;
