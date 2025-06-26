@@ -43,8 +43,12 @@ export async function getAllProducts(keyword: string = '', limit: number = 5) {
 
 export async function getAllCustomers() {
   try {
-    const response = await bigcommerce.get('/customers');
+    const limit = 500;
+    const query = new URLSearchParams();
+    query.set('limit', limit.toString());
+    const response = await bigcommerce.get(`/customers?${query.toString()}`);
     const customers = response.data;
+    console.log({customers: customers.length})
     return customers;
   } catch (error) {
     console.error('Failed to fetch customers:', error);

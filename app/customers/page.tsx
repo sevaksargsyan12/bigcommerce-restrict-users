@@ -128,7 +128,7 @@ export default function ProductListPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const limit = 5;
+        const limit = 100;
         let query = "";
         if (page) {
           query = page;
